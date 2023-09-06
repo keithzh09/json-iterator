@@ -43,7 +43,7 @@ func encoderOfStruct(ctx *ctx, typ reflect2.Type) ValEncoder {
 			})
 		}
 	}
-	return &structEncoder{typ, finalOrderedFields}
+	return &structEncoder{typ: typ, fields: finalOrderedFields, ignoreOmitempty: ctx.structIgnoreOmitempty}
 }
 
 func createCheckIsEmpty(ctx *ctx, typ reflect2.Type) checkIsEmpty {
@@ -134,6 +134,9 @@ type IsEmbeddedPtrNil interface {
 type structEncoder struct {
 	typ    reflect2.Type
 	fields []structFieldTo
+
+	// 增加一个参数 作为忽略omitempty的判断
+	ignoreOmitempty bool
 }
 
 type structFieldTo struct {
@@ -145,7 +148,8 @@ func (encoder *structEncoder) Encode(ptr unsafe.Pointer, stream *Stream) {
 	stream.WriteObjectStart()
 	isNotFirst := false
 	for _, field := range encoder.fields {
-		if field.encoder.omitempty && field.encoder.IsEmpty(ptr) {
+		// 此处添加参数判断
+		if field.encoder.omitempty && !encoder.ignoreOmitempty && field.encoder.IsEmpty(ptr) {
 			continue
 		}
 		if field.encoder.IsEmbeddedPtrNil(ptr) {
